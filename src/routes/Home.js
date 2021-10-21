@@ -45,7 +45,7 @@ function Home({ history, user, connect }) {
         </Grid>
         <Grid item>
           <Typography variant="subtitle1" sx={{ textAlign: 'center' }}>
-            Upload and share public files with others
+            Upload and share public folders and files
           </Typography>
         </Grid>
         <Grid container item sx={{ mt: 3 }} justifyContent="center" alignItems="center">

@@ -6,14 +6,13 @@
   "scripts": {
     "start": "webpack serve --mode development",
     "build": "webpack --mode production",
-    "daemon": "ceramic daemon"
+    "ceramic": "ceramic daemon"
   },
   "keywords": [],
   "author": "Joseph Reed",
   "license": "MIT",
   "dependencies": {
     "@cbj/ceramic-filesystem": "^0.2.3",
-    "@ceramicnetwork/ipfs-daemon": "^1.1.5",
     "@emotion/react": "^11.4.1",
     "@emotion/styled": "^11.3.0",
     "@mui/core": "^5.0.0-alpha.45",

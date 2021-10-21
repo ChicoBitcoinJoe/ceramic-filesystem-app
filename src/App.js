@@ -6,8 +6,8 @@ import CssBaseline from '@mui/material/CssBaseline'
 import Box from '@mui/material/Box'
 
 import { EthereumAuthProvider, SelfID } from '@self.id/web'
-import * as IPFS from 'ipfs-core'    
-// import { IpfsDaemon } from "@ceramicnetwork/ipfs-daemon"
+import * as IPFS from 'ipfs-core'
+import { FileSystem } from '@cbj/ceramic-filesystem'
 
 import theme from './theme'
 import Home from './routes/Home'
@@ -22,13 +22,14 @@ function App() {
   const [ user, setUser ] = React.useState()
   const connect = async () => {
     try {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' })      
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
       const self = await SelfID.authenticate({
         authProvider: new EthereumAuthProvider(window.ethereum, accounts[0]),
         ceramic: 'local',
         connectNetwork: 'testnet-clay',
       })
-      
+      const userFS = new FileSystem(self.client.ceramic)
+      await userFS.open(self.id.toString(), "C:", { createIfUndefined: true })      
       setUser(self)
       return self
     }
