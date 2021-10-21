@@ -16,7 +16,7 @@ import FolderGrid from '../components/FolderGrid'
 import FileGrid from '../components/FileGrid'
 
 const parsePath = (fullPath) => {
-  // remove leading /
+  // remove leading slash
   if(fullPath[fullPath.length-1] === '/')
     fullPath = fullPath.slice(0, -1)
 
@@ -36,7 +36,6 @@ function Drive({ match, history, user, connect, ipfs }) {
   const [ fullPath, folderPath, fileName ] = parsePath(decodeURIComponent(match.params.path))
   // console.log(fullPath, folderPath, fileName)
   const core = new Core({ ceramic: 'local' })
-  const coreFS = new FileSystem(core.ceramic)
   const identity = new PublicID({ core, id: match.params.did })
   const owned = identity?.id === user?.id
   // console.log("Identity is owned:", owned)
@@ -48,9 +47,13 @@ function Drive({ match, history, user, connect, ipfs }) {
 
   React.useEffect(() => {
     (async function Loading() {
+      console.log('Detected change in user, did, or path.')
       const profile = await identity.get('basicProfile')
       console.log('opening', identity.id, folderPath)
-      const folder = await coreFS.open(identity.id, folderPath)
+      console.log('Using', user ? 'user.client.ceramic' : 'core.ceramic', 'core')
+      const ceramic = user ? user.client.ceramic : core.ceramic
+      const fs = new FileSystem(ceramic)
+      const folder = await fs.open(identity.id, folderPath, { createIfUndefined: true })
       if(folder) {
         const folders = await folder.folders.getFirstN(100)
         const files = await folder.files.getFirstN(100)
@@ -59,37 +62,17 @@ function Drive({ match, history, user, connect, ipfs }) {
         
         setFolder({ folder, folders, files })        
       }
-      else {
-        setFolder(undefined)
-      }
       
       setName(profile?.name ? profile?.name : identity.id.toString().slice(0,12)+'...')
       setProfile(profile)
       setLoading(false)
     })()
-  }, [match.params.path, match.params.did])
-
-  React.useEffect(() => {
-    (async () => {
-      if(user) {
-        const userFS = new FileSystem(user.client.ceramic)
-        const folder = await userFS.open(user.id.toString(), folderPath)
-        if(folder) {
-          const folders = await folder.folders.getFirstN(100)
-          const files = await folder.files.getFirstN(100)
-          console.log('folders', folders)
-          console.log('files', files)
-          
-          setFolder({ folder, folders, files })        
-        }
-      }    
-    })()
-  }, [user])
+  }, [user, match.params.did, match.params.path])
 
   const createFolder = async (newFolderName) => {
     const newFolder = await folder.folder.open(newFolderName, { createIfUndefined: true })
     if(newFolder)
-      history.push('/' + identity.id.toString() + '/' + encodeURIComponent(filePath + '/' + newFolder.name))
+      history.push('/' + identity.id.toString() + '/' + encodeURIComponent(folderPath + '/' + newFolder.name))
     else
       console.error(new Error("Failed to create new folder", newFolderName))
   }
@@ -100,10 +83,9 @@ function Drive({ match, history, user, connect, ipfs }) {
 
   const addFileToDrive = async ([ file ]) => {
     console.log('Adding', file, 'to', user.id.toString())
-    const filePath = fullPath + '//' + file.name
+    const filePath = folderPath + '//' + file.name
     const fs = new FileSystem(user.client.ceramic)
-    const validPath = fs.validPath(fullPath)
-    if(!validPath) return
+    if(!fs.validPath(filePath)) return
 
     const ipfsFile = await ipfs.add(file, {
       progress: (current) => {
@@ -121,6 +103,7 @@ function Drive({ match, history, user, connect, ipfs }) {
       console.log('update?')
     }
     else {
+      console.log('creating', user.id.toString(), filePath)
       const ceramicFile = await fs.open(user.id.toString(), filePath, { createIfUndefined: true })
       console.log('file:', ceramicFile)
       await ceramicFile.history.insert(ipfsFile.cid.toString())
